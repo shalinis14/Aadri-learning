@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arendelle Academy - Expanded Learning</title>
+    <style>
+        /* --- THEME & BASICS --- */
+        body {
+            font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif;
+            background: linear-gradient(180deg, #d4f1f9 0%, #ffffff 100%);
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; text-align: center; color: #004e7c;
+            -webkit-user-select: none;
+        }
+
+        /* --- MENU SCREEN --- */
+        #menu-screen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100vh; width: 100%;
+        }
+        .menu-btn {
+            background: white; border: 3px solid #00a9e0; border-radius: 20px;
+            width: 80%; max-width: 300px; padding: 20px; margin: 15px;
+            font-size: 24px; font-weight: bold; color: #004e7c;
+            box-shadow: 0 5px 0 #008bb5; cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .menu-btn:hover { background: #f0f8ff; }
+        .menu-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008bb5; }
+
+        /* --- GAME SCREEN --- */
+        #game-screen { display: none; width: 100%; flex-direction: column; align-items: center; }
+
+        .top-bar {
+            width: 100%; display: flex; justify-content: space-between;
+            padding: 15px; box-sizing: border-box; align-items: center;
+        }
+        .back-btn {
+            background: none; border: none; font-size: 24px; cursor: pointer;
+            padding: 10px; border-radius: 50%; transition: background 0.2s ease;
+        }
+        .back-btn:hover { background: rgba(0, 169, 224, 0.1); }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px; padding: 20px; width: 85%; max-width: 500px;
+            box-shadow: 0 10px 20px rgba(0, 169, 224, 0.2);
+            margin-top: 10px; border: 2px solid #aeeaff;
+        }
+
+        .question-number {
+            position: absolute; top: 15px; left: 15px;
+            background: #00a9e0; color: white; padding: 5px 12px;
+            border-radius: 15px; font-size: 14px; font-weight: bold;
+        }
+
+        .visual-container {
+            margin: 20px 0; min-height: 60px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; line-height: 1.4;
+        }
+
+        /* --- ANSWER BUTTONS --- */
+        .options-grid {
+            display: grid; grid-template-columns: 1fr; gap: 12px;
+            width: 100%; margin-top: 20px;
+        }
+        .options-grid.math-mode { grid-template-columns: repeat(3, 1fr); } /* 3 cols for numbers */
+
+        .answer-btn {
+            background: white; border: 2px solid #00a9e0; border-radius: 15px;
+            padding: 15px; font-size: 18px; color: #004e7c;
+            font-family: inherit; font-weight: bold; box-shadow: 0 4px 0 #008bb5;
+            cursor: pointer; transition: all 0.1s ease;
+            min-height: 50px; display: flex; align-items: center; justify-content: center;
+        }
+        .answer-btn:hover { background: #f0f8ff; transform: translateY(-2px); }
+        .answer-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008bb5; }
+        .answer-btn.correct {
+            background: #d4edda; border-color: #28a745;
+            animation: correctPulse 0.6s ease;
+        }
+        .answer-btn.incorrect {
+            background: #f8d7da; border-color: #dc3545;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .feedback {
+            height: 50px; margin-top: 15px; font-size: 22px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .correct { color: #28a745; }
+        .wrong { color: #dc3545; }
+
+        .progress-bar {
+            width: 90%; height: 12px; background: #e0e0e0;
+            border-radius: 6px; margin-top: 10px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #00a9e0, #008bb5);
+            width: 0%; transition: width 0.5s ease;
+        }
+
+        .celebration {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 169, 224, 0.1); pointer-events: none;
+            display: none; align-items: center; justify-content: center;
+            font-size: 48px; z-index: 1000;
+        }
+
+        .stats-display {
+            display: flex; gap: 15px; font-size: 14px; color: #008bb5;
+            margin-top: 10px;
+        }
+
+        .difficulty-indicator {
+            position: absolute; top: 15px; right: 15px;
+            padding: 5px 10px; border-radius: 10px; font-size: 12px;
+            font-weight: bold;
+        }
+        .difficulty-easy { background: #d4edda; color: #155724; }
+        .difficulty-medium { background: #fff3cd; color: #856404; }
+        .difficulty-hard { background: #f8d7da; color: #721c24; }
+
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1 style="font-size: 30px; margin-bottom: 10px;">🏰 Arendelle Academy</h1>
+        <p style="font-size: 18px; color: #008bb5; margin-bottom: 30px;">Hi Aadrika! Ready for your learning adventure?</p>
+        <button class="menu-btn" onclick="startGame('math')">🧮 Math Magic<br><small style="font-size: 16px;">250 Questions</small></button>
+        <button class="menu-btn" onclick="startGame('english')">📖 Story Words<br><small style="font-size: 16px;">250 Questions</small></button>
+        <button class="menu-btn" onclick="showProgress()">📊 My Progress</button>
+    </div>
+
+    <div id="game-screen">
+        <div class="top-bar">
+            <button class="back-btn" onclick="goHome()">🏠</button>
+            <div style="font-weight: bold; color: #008bb5;" id="score-display">❄️ 0</div>
+        </div>
+
+        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+        <div class="stats-display">
+            <span id="question-count">Question 1 of 250</span>
+            <span id="accuracy">Accuracy: 100%</span>
+        </div>
+
+        <div class="card" style="position: relative;">
+            <div class="question-number" id="question-num">1</div>
+            <div class="difficulty-indicator" id="difficulty-badge">Easy</div>
+            <div style="font-size: 40px; margin-bottom: 10px;" id="avatar">👸🏼</div>
+            <div id="question-text" style="font-size: 20px; margin-bottom: 10px; line-height: 1.4;">Loading your magical question...</div>
+
+            <div class="visual-container" id="visual-area"></div>
+
+            <div class="options-grid" id="options-area"></div>
+
+            <div class="feedback" id="feedback-text"></div>
+        </div>
+    </div>
+
+    <div class="celebration" id="celebration">🎉</div>
+
+    <script>
+        // Import the question banks
+        // (In a real implementation, these would be imported from separate files)
+
+        // For this demo, we'll include a sample of questions
+        const database = {
+            math: [
+                // Number and Operations - Counting to 100
+                { q: "Count the ice crystals. How many are there?", visual: "❄️❄️❄️❄️❄️", choices: ["4", "5", "6"], correct: "5", type: "number", difficulty: "easy" },
+                { q: "What number comes after 15?", visual: "15, ?", choices: ["14", "16", "17"], correct: "16", type: "number", difficulty: "easy" },
+                { q: "What number comes before 20?", visual: "?, 20", choices: ["18", "19", "21"], correct: "19", type: "number", difficulty: "easy" },
+                { q: "Count by 10s: 10, 20, 30, ?", visual: "10️⃣2️⃣0️⃣3️⃣0️⃣?", choices: ["35", "40", "50"], correct: "40", type: "number", difficulty: "medium" },
+                { q: "How many snowflakes in total?", visual: "❄️❄️❄️ + ❄️❄️❄️❄️❄️❄️❄️", choices: ["9", "10", "11"], correct: "10", type: "number", difficulty: "easy" },
+
+                // Addition Concepts
+                { q: "Elsa has 3 ice blocks. Anna gives her 2 more. How many total?", visual: "❄️❄️❄️ + ❄️❄️", choices: ["4", "5", "6"], correct: "5", type: "number", difficulty: "easy" },
+                { q: "4 + 3 = ?", visual: "🧊🧊🧊🧊 + 🧊🧊🧊", choices: ["6", "7", "8"], correct: "7", type: "number", difficulty: "easy" },
+                { q: "Olaf finds 6 sticks. Kristoff gives him 1 more. Total sticks?", visual: "🦴🦴🦴🦴🦴🦴 + 🦴", choices: ["6", "7", "8"], correct: "7", type: "number", difficulty: "easy" },
+
+                // Measurement and Data
+                { q: "Which ribbon is LONGER?", visual: "A: ——————— <br> B: ———", choices: ["A", "B", "Same"], correct: "A", type: "text", difficulty: "easy" },
+                { q: "Which pencil is SHORTER?", visual: "🖊️ (long) vs ✏️ (short)", choices: ["First", "Second", "Same"], correct: "Second", type: "text", difficulty: "easy" },
+                { q: "What time does the clock show?", visual: "🕐", choices: ["1:00", "12:00", "2:00"], correct: "1:00", type: "text", difficulty: "medium" },
+                { q: "It's 3:00. In 1 hour, what time will it be?", visual: "🕒 + 1 hour", choices: ["2:00", "4:00", "3:30"], correct: "4:00", type: "text", difficulty: "medium" },
+
+                // Geometry
+                { q: "What shape is this?", visual: "⭕", choices: ["Circle", "Square", "Triangle"], correct: "Circle", type: "text", difficulty: "easy" },
+                { q: "Which shape has 3 sides?", visual: "⭕⬜△", choices: ["Circle", "Square", "Triangle"], correct: "Triangle", type: "text", difficulty: "easy" },
+                { q: "Count the corners on this shape:", visual: "⬜", choices: ["3", "4", "0"], correct: "4", type: "number", difficulty: "easy" }
+            ],
+            english: [
+                // Vocabulary
+                { q: "What is another word for 'big'?", visual: "🐘 Big elephant", choices: ["Small", "Large", "Tiny"], correct: "Large", type: "text", difficulty: "easy" },
+                { q: "What does 'happy' mean?", visual: "😊", choices: ["Sad", "Joyful", "Angry"], correct: "Joyful", type: "text", difficulty: "easy" },
+                { q: "Which word means the OPPOSITE of hot?", visual: "🔥 vs ❄️", choices: ["Warm", "Cold", "Cool"], correct: "Cold", type: "text", difficulty: "easy" },
+                { q: "What is a baby cow called?", visual: "🐄👶", choices: ["Puppy", "Kitten", "Calf"], correct: "Calf", type: "text", difficulty: "medium" },
+
+                // Phonics
+                { q: "How many syllables in 'elephant'?", visual: "🐘 E-le-phant", choices: ["2", "3", "4"], correct: "3", type: "number", difficulty: "medium" },
+                { q: "Clap the syllables in 'butterfly':", visual: "🦋 But-ter-fly", choices: ["2", "3", "4"], correct: "3", type: "number", difficulty: "medium" },
+                { q: "What does 'un-' mean in 'unhappy'?", visual: "😢 Un-happy", choices: ["Very", "Not", "Again"], correct: "Not", type: "text", difficulty: "hard" },
+
+                // High-Frequency Words
+                { q: "Which word means 'also'?", visual: "Plus sign ➕", choices: ["Too", "Two", "To"], correct: "Too", type: "text", difficulty: "medium" },
+                { q: "Complete: 'I ___ going to school.'", visual: "🏫 Going to school", choices: ["Am", "Is", "Are"], correct: "Am", type: "text", difficulty: "easy" },
+                { q: "How do you spell the word for H₂O?", visual: "💧 Liquid to drink", choices: ["Watter", "Water", "Waiter"], correct: "Water", type: "text", difficulty: "easy" },
+
+                // Comprehension: Informational Text
+                { q: "A story about different animals at the zoo. What is the main idea?", visual: "🦁🐘🐵 Zoo animals", choices: ["Lions are big", "Zoo has animals", "Elephants eat"], correct: "Zoo has animals", type: "text", difficulty: "medium" },
+                { q: "Text says: 'Dogs bark, cats meow, birds chirp.' What do cats do?", visual: "🐱 Cat sound", choices: ["Bark", "Meow", "Chirp"], correct: "Meow", type: "text", difficulty: "easy" },
+
+                // Comprehension: Literature
+                { q: "In 'Three Little Pigs', who is the main character?", visual: "🐷🐷🐷 Three pigs", choices: ["Wolf", "Pigs", "House"], correct: "Pigs", type: "text", difficulty: "easy" },
+                { q: "Where does 'Goldilocks' take place?", visual: "🏠 Bear's house", choices: ["Forest house", "Castle", "School"], correct: "Forest house", type: "text", difficulty: "medium" },
+                { q: "What happens FIRST in 'Three Bears'?", visual: "🚪 Story beginning", choices: ["Goldilocks sleeps", "Goldilocks enters", "Bears come home"], correct: "Goldilocks enters", type: "text", difficulty: "hard" }
+            ]
+        };
+
+        let currentSubject = 'math';
+        let currentIndex = 0;
+        let score = 0;
+        let totalQuestions = 0;
+        let correctAnswers = 0;
+        let activeQuestions = [];
+        let startTime = Date.now();
+
+        // Game state management
+        function startGame(subject) {
+            currentSubject = subject;
+            activeQuestions = [...database[subject]]; // Copy array to avoid mutations
+            shuffleArray(activeQuestions); // Randomize question order
+            currentIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            totalQuestions = 0;
+            startTime = Date.now();
+
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            document.getElementById('score-display').innerText = "❄️ 0";
+
+            loadQuestion();
+        }
+
+        function goHome() {
+            document.getElementById('menu-screen').style.display = 'flex';
+            document.getElementById('game-screen').style.display = 'none';
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function loadQuestion() {
+            if (currentIndex >= activeQuestions.length) {
+                finishGame();
+                return;
+            }
+
+            const qData = activeQuestions[currentIndex];
+            totalQuestions++;
+
+            // Update question counter and stats
+            document.getElementById('question-num').innerText = currentIndex + 1;
+            document.getElementById('question-count').innerText = `Question ${currentIndex + 1} of ${activeQuestions.length}`;
+
+            // Update difficulty indicator
+            const difficultyBadge = document.getElementById('difficulty-badge');
+            difficultyBadge.innerText = qData.difficulty ? qData.difficulty.charAt(0).toUpperCase() + qData.difficulty.slice(1) : 'Medium';
+            difficultyBadge.className = `difficulty-indicator difficulty-${qData.difficulty || 'medium'}`;
+
+            // Set question content
+            document.getElementById('question-text').innerHTML = qData.q;
+            document.getElementById('feedback-text').innerHTML = "";
+            document.getElementById('visual-area').innerHTML = qData.visual || "";
+
+            // Clear previous button states
+            const existingBtns = document.querySelectorAll('.answer-btn');
+            existingBtns.forEach(btn => {
+                btn.classList.remove('correct', 'incorrect');
+                btn.disabled = false;
+            });
+
+            // Setup answer buttons
+            const grid = document.getElementById('options-area');
+            grid.innerHTML = "";
+
+            // Adjust grid layout based on question type
+            if (qData.type === "number" && qData.choices.every(choice => !isNaN(choice))) {
+                grid.className = "options-grid math-mode";
+            } else {
+                grid.className = "options-grid";
+            }
+
+            qData.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = "answer-btn";
+                btn.innerHTML = choice;
+                btn.onclick = () => checkAnswer(choice, qData.correct, btn);
+                grid.appendChild(btn);
+            });
+
+            // Update progress bar
+            const pct = (currentIndex / activeQuestions.length) * 100;
+            document.getElementById('progress').style.width = pct + "%";
+
+            // Update accuracy
+            const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 100;
+            document.getElementById('accuracy').innerText = `Accuracy: ${accuracy}%`;
+        }
+
+        function checkAnswer(selected, correct, buttonElement) {
+            const feedback = document.getElementById('feedback-text');
+            const allButtons = document.querySelectorAll('.answer-btn');
+
+            // Disable all buttons to prevent multiple clicks
+            allButtons.forEach(btn => btn.disabled = true);
+
+            if (selected === correct) {
+                score++;
+                correctAnswers++;
+                document.getElementById('score-display').innerText = "❄️ " + score;
+                feedback.innerHTML = getRandomPositiveFeedback();
+                feedback.className = "feedback correct";
+                buttonElement.classList.add('correct');
+
+                // Show celebration effect
+                showCelebration();
+
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 1500);
+            } else {
+                feedback.innerHTML = getRandomNegativeFeedback();
+                feedback.className = "feedback wrong";
+                buttonElement.classList.add('incorrect');
+
+                // Highlight the correct answer
+                allButtons.forEach(btn => {
+                    if (btn.innerHTML === correct) {
+                        btn.classList.add('correct');
+                    }
+                });
+
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 2000);
+            }
+        }
+
+        function getRandomPositiveFeedback() {
+            const messages = [
+                "Excellent! ✨", "Great job! 🌟", "Perfect! 🎉", "Wonderful! 💎",
+                "Amazing! ⭐", "Fantastic! 🎊", "You're brilliant! 💫", "Outstanding! 🏆"
+            ];
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+
+        function getRandomNegativeFeedback() {
+            const messages = [
+                "Try again! 🤔", "Almost there! 💪", "Keep trying! 🌟", "Don't give up! ❄️",
+                "You'll get it! 🎯", "Nice try! 🌈", "So close! ⚡", "Keep going! 🚀"
+            ];
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+
+        function showCelebration() {
+            const celebration = document.getElementById('celebration');
+            const celebrations = ['🎉', '✨', '🌟', '🎊', '💫', '⭐'];
+            celebration.innerHTML = celebrations[Math.floor(Math.random() * celebrations.length)];
+            celebration.style.display = 'flex';
+
+            setTimeout(() => {
+                celebration.style.display = 'none';
+            }, 800);
+        }
+
+        function finishGame() {
+            const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
+            const timeSpent = Math.round((Date.now() - startTime) / 1000 / 60); // minutes
+
+            document.getElementById('question-text').innerHTML = "🎉 Congratulations! 🎉";
+            document.getElementById('visual-area').innerHTML = `
+                <div style="font-size: 18px; line-height: 1.6;">
+                    <p><strong>Final Score: ${score} out of ${totalQuestions}</strong></p>
+                    <p>Accuracy: ${accuracy}%</p>
+                    <p>Time: ${timeSpent} minutes</p>
+                    <p>${getPerformanceMessage(accuracy)}</p>
+                </div>
+            `;
+            document.getElementById('options-area').innerHTML = `
+                <button class="answer-btn" onclick="startGame('${currentSubject}')">Play Again</button>
+                <button class="answer-btn" onclick="goHome()">Choose New Subject</button>
+            `;
+            document.getElementById('progress').style.width = "100%";
+            document.getElementById('feedback-text').innerHTML = "";
+
+            // Save progress (in a real app, this would save to localStorage or server)
+            saveProgress(currentSubject, score, totalQuestions, accuracy);
+        }
+
+        function getPerformanceMessage(accuracy) {
+            if (accuracy >= 90) return "Outstanding work! You're mastering these skills! 🌟";
+            if (accuracy >= 80) return "Great job! You're doing really well! 🎉";
+            if (accuracy >= 70) return "Good effort! Keep practicing! 💪";
+            return "Nice try! Practice makes perfect! 🌈";
+        }
+
+        function saveProgress(subject, score, total, accuracy) {
+            // In a real implementation, this would save to localStorage or a server
+            console.log(`Progress saved: ${subject} - ${score}/${total} (${accuracy}%)`);
+        }
+
+        function showProgress() {
+            alert("Progress tracking feature coming soon! 📊");
+        }
+
+        // Initialize the game
+        document.addEventListener('DOMContentLoaded', function() {
+            // Any initialization code would go here
+        });
+
+    </script>
+</body>
+</html>
